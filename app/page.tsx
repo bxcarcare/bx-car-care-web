@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function AuthPage() {
+function AuthPageInner() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -16,7 +16,9 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
+    null
+  );
 
   const canSubmit = useMemo(() => {
     return email.trim().length > 3 && password.length >= 6 && !loading;
@@ -29,7 +31,7 @@ export default function AuthPage() {
 
     try {
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -39,8 +41,6 @@ export default function AuthPage() {
 
         if (error) throw error;
 
-        // Dependendo do seu Supabase, pode pedir confirmação por email.
-        // Mesmo assim, mostramos sucesso.
         setMsg({
           type: "ok",
           text:
@@ -52,7 +52,7 @@ export default function AuthPage() {
       }
 
       // signin
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -60,7 +60,6 @@ export default function AuthPage() {
 
       setMsg({ type: "ok", text: "Login feito com sucesso! Redirecionando..." });
 
-      // manda pra área correta
       if (role === "owner") router.push("/owner");
       else router.push("/client");
     } catch (err: any) {
@@ -144,11 +143,7 @@ export default function AuthPage() {
               ...(canSubmit ? {} : styles.primaryBtnDisabled),
             }}
           >
-            {loading
-              ? "Aguarde..."
-              : mode === "signup"
-              ? "Criar conta"
-              : "Entrar"}
+            {loading ? "Aguarde..." : mode === "signup" ? "Criar conta" : "Entrar"}
           </button>
 
           <button
@@ -162,14 +157,31 @@ export default function AuthPage() {
           <p style={styles.footer}>
             Você está criando/entrando como{" "}
             <span style={styles.footerStrong}>{roleLabel}</span>.
-            <span style={styles.footerMuted}>
-              {" "}
-              (Isso vem da Home)
-            </span>
+            <span style={styles.footerMuted}> (Isso vem da Home)</span>
           </p>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={styles.page}>
+          <div style={styles.card}>
+            <div style={styles.brand}>
+              <div style={styles.logo} />
+              <h1 style={styles.title}>BX Car Care</h1>
+              <p style={styles.subtitle}>Carregando…</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <AuthPageInner />
+    </Suspense>
   );
 }
 
